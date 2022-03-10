@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
-import sqlite3, json
+import sqlite3, json, numpy
 
 app = Flask(__name__)
-CORS(app, support_credentials=True)
+cors = CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 email="admin@admin.com"
 password="a29c57c6894dee6e8251510d58c07078ee3f49bf"
@@ -21,9 +21,10 @@ def new_id():
 	crsr = conn.cursor()
 	crsr.execute('SELECT MAX(id) FROM emp_details')
 	max_value = crsr.fetchall()
-	ans = str(max_value[0])
+	max_arr = numpy.array(max_value)
+	ans = int(max_arr[0])
 	conn.close()
-	return ans[1]
+	return ans
 
 @app.route("/emp", methods=["GET"])
 def get_emp():
@@ -38,14 +39,19 @@ def get_emp():
 def add_emp():
 	emp = request.get_json()
 	emp_new_id = new_id()
-	idv = str(int(emp_new_id) + 1)
+	idv = str(emp_new_id + 1)
 	connection = sqlite3.connect('employee.db')
 	cursor = connection.cursor()
 	mysql_cmd = 'INSERT INTO emp_details VALUES('+idv+', "'+emp['name']+'", "'+emp['designation']+'", "'+emp['address']+'")'
 	cursor.execute(mysql_cmd)
 	connection.commit()
 	connection.close()
-	return "201 CREATED - New record created successfully with id "+idv+"."
+	response = app.response_class(response=json.dumps({'some': 'data'}), status=201, mimetype='application/json')
+	response.headers.add('Access-Control-Allow-Credentials', 'false')
+	response.headers.add('Access-Control-Allow-Origin', "*")
+	response.headers.add('Access-Control-Allow-Headers', "*")
+	response.headers.add('Access-Control-Allow-Methods', "*")
+	return response
 	
 @app.route("/emp", methods=["PUT"])
 def update_emp():
